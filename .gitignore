@@ -44,3 +44,12 @@
 .vs/
 *.suo
 *.VC.db
+*.VC.VC.opendb
+*.user
+
+# Build output directories
+build/
+Debug/
+Release/
+x64/
+Win32/

@@ -1,85 +1,100 @@
-# CPP-BD - Shadowlight Duel
+# CPP-BD - 影域博弈
 
-`Shadowlight Duel` is a C++ 2D asymmetric online PVP demo built for the course project. The first playable version implements the base idea from the design brief: Light Blade versus Shadow Walker, realtime network synchronization, skills, health, score, capture point, cooldown UI, and win settlement.
+《影域博弈》是一款用 C++ 实现的双人联机 2D 非对称 PVP 游戏。项目围绕“光刃使”和“影行者”的光影对抗展开，已经实现基础可玩版本：开始菜单、建房、加入房间、本机离线演示、移动、攻击、技能、血量、比分、占点、灯源、胜负结算和联机状态同步。
 
-## Current Features
+## 一键启动
 
-- Win32/GDI 2D window, no external art or game-engine dependency.
-- TCP LAN PVP with one host and one client.
-- Offline local duel mode for quick presentation and testing.
-- Light Blade: ranged light attack, burst light skill, place light beacon.
-- Shadow Walker: ranged shadow attack, dash strike, shadow field to weaken lights.
-- Realtime synchronized state: player positions, health, projectiles, scores, lights, capture progress, match phase.
-- Game loop, hit detection, cooldowns, respawn, first to 3 score win condition.
-- Start menu, room waiting state, HUD, cooldown display, capture bar, victory screen.
+仓库根目录下有启动脚本：
 
-## Controls
+```text
+启动游戏.bat
+```
 
-Menu:
+双击它即可启动游戏。如果还没有生成可执行文件，脚本会先自动编译，再打开游戏。
 
-- `H`: host room as Light Blade.
-- `J`: join room as Shadow Walker.
-- `O`: offline local duel.
-- Type digits and dots to edit the join IP, `Backspace` deletes.
+也可以在命令行运行中文启动器：
 
-Light Blade:
+```powershell
+.\启动游戏.bat
+```
 
-- `W/A/S/D`: move.
-- `F`: attack.
-- `G`: burst light.
-- `Q`: place light beacon.
-- `R`: reset match.
+## 菜单操作
 
-Offline Shadow Walker:
+- `H`：建立房间，作为主机操控“光刃使”。
+- `J`：加入房间，作为客户端操控“影行者”。
+- `O`：进入本机离线双人演示。
+- 数字键和小数点：修改加入房间时使用的 IP。
+- `Backspace`：删除 IP 中最后一个字符。
 
-- Arrow keys: move.
-- `Enter`: attack.
-- Right `Shift`: dash.
-- Right `Ctrl`: shadow field.
+## 角色操作
 
-Client Shadow Walker:
+光刃使：
 
-- `W/A/S/D`: move.
-- `F`: attack.
-- `G`: dash.
-- `Q`: shadow field.
-- `R`: reset match.
+- `W/A/S/D`：移动。
+- `F`：普通攻击。
+- `G`：强光爆发，近距离压制影行者。
+- `Q`：放置光源，改变地图明暗格局。
+- `R`：重新开始对局。
 
-## Build With MinGW
+联机客户端影行者：
 
-From the repository root:
+- `W/A/S/D`：移动。
+- `F`：普通攻击。
+- `G`：暗影冲刺，快速接近或脱离战场。
+- `Q`：释放影域，削弱附近光源。
+- `R`：重新开始对局。
+
+本机离线模式中的影行者：
+
+- 方向键：移动。
+- `Enter`：普通攻击。
+- `K` 或 `Shift`：暗影冲刺。
+- `L` 或 `Ctrl`：释放影域。
+
+## 联机方法
+
+同一台电脑双开测试：
+
+1. 双击 `启动游戏.bat` 打开第一个窗口。
+2. 第一个窗口按 `H`，进入主机等待状态。
+3. 再双击 `启动游戏.bat` 打开第二个窗口。
+4. 第二个窗口保持 IP 为 `127.0.0.1`。
+5. 第二个窗口按 `J` 加入房间。
+
+两台电脑局域网联机：
+
+1. 主机电脑打开游戏，按 `H` 建立房间。
+2. 客户端电脑打开游戏。
+3. 客户端在菜单中输入主机电脑的局域网 IP。
+4. 客户端按 `J` 加入房间。
+5. 如果连接失败，检查 Windows 防火墙是否允许该程序通信，游戏使用端口 `54000`。
+
+## 编译方法
+
+使用 MinGW：
 
 ```powershell
 mingw32-make
 ```
 
-Run:
+如果没有 `mingw32-make`，可以直接编译：
 
 ```powershell
-.\build\ShadowlightDuel.exe
+g++ -std=c++14 -O2 -Wall -Wextra "CPP-BD/src/main.cpp" -o "build/YingYuBoYi.exe" -mwindows -lws2_32 -lgdi32
 ```
 
-If `mingw32-make` is unavailable, compile directly:
-
-```powershell
-g++ -std=c++14 -O2 -Wall -Wextra "CPP-BD/src/main.cpp" -o "build/ShadowlightDuel.exe" -mwindows -lws2_32 -lgdi32
-```
-
-## Visual Studio
-
-Open:
+使用 Visual Studio：
 
 ```text
 CPP-BD/CPP-BD.sln
 ```
 
-The project references `CPP-BD/src/main.cpp` and links `ws2_32.lib` for networking.
+工程已经引用 `CPP-BD/src/main.cpp`，并链接网络库 `ws2_32.lib`。
 
-## Network Demo
+## 详细游玩声明
 
-1. On the first computer, run the game and press `H`.
-2. On the second computer, run the game, type the host IP, and press `J`.
-3. The host controls Light Blade, the client controls Shadow Walker.
+完整说明见：
 
-For same-machine testing, open two copies, host one copy, keep `127.0.0.1` in the second copy, then join.
-
+```text
+游玩声明.md
+```

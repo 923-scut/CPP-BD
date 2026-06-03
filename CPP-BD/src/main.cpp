@@ -466,6 +466,12 @@ public:
     void onKeyDown(WPARAM key) {
         keys[key & 0xff] = true;
         if (mode == ModeMenu) {
+            if (showGuide) {
+                if (key == VK_ESCAPE || key == 'B' || key == VK_BACK) {
+                    showGuide = false;
+                }
+                return;
+            }
             if (key == 'H') startHost();
             else if (key == 'J') startClient();
             else if (key == 'O') startOffline();
@@ -484,6 +490,19 @@ public:
 
     void onKeyUp(WPARAM key) {
         keys[key & 0xff] = false;
+    }
+
+    void onMouseDown(int x, int y) {
+        if (mode != ModeMenu) return;
+        if (showGuide) {
+            if (isInside(x, y, 52, 622, 220, 664)) {
+                showGuide = false;
+            }
+            return;
+        }
+        if (isInside(x, y, 88, 386, 318, 430)) {
+            showGuide = true;
+        }
     }
 
     void tick() {
@@ -546,7 +565,8 @@ public:
         FillRect(hdc, &rc, bg);
         DeleteObject(bg);
         if (mode == ModeMenu) {
-            drawMenu(hdc);
+            if (showGuide) drawGuide(hdc);
+            else drawMenu(hdc);
         } else {
             drawWorld(hdc, visibleWorld);
         }
@@ -554,6 +574,7 @@ public:
 
 private:
     AppMode mode = ModeMenu;
+    bool showGuide = false;
     bool keys[256]{};
     char joinIp[64]{};
     Game game;
@@ -563,6 +584,10 @@ private:
     NetShared net;
     std::thread netThread;
     uint32_t inputSequence = 0;
+
+    bool isInside(int x, int y, int l, int t, int r, int b) const {
+        return x >= l && x <= r && y >= t && y <= b;
+    }
 
     void startHost() {
         stopNetwork();
@@ -643,8 +668,8 @@ private:
         if (keys[VK_LEFT]) input.buttons |= BtnLeft;
         if (keys[VK_RIGHT]) input.buttons |= BtnRight;
         if (keys[VK_RETURN]) input.buttons |= BtnAttack;
-        if (keys[VK_RSHIFT]) input.buttons |= BtnSkill;
-        if (keys[VK_RCONTROL]) input.buttons |= BtnUtility;
+        if (keys['K'] || keys[VK_SHIFT] || keys[VK_RSHIFT]) input.buttons |= BtnSkill;
+        if (keys['L'] || keys[VK_CONTROL] || keys[VK_RCONTROL]) input.buttons |= BtnUtility;
         if (keys['R']) input.buttons |= BtnReset;
         input.aimX = -1.0f;
         input.aimY = 0.0f;
@@ -776,11 +801,13 @@ private:
     void drawText(HDC hdc, int x, int y, const char* text, COLORREF color, int size = 18) {
         SetBkMode(hdc, TRANSPARENT);
         SetTextColor(hdc, color);
-        HFONT font = CreateFontA(size, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
+        wchar_t wideText[512]{};
+        MultiByteToWideChar(CP_UTF8, 0, text, -1, wideText, 512);
+        HFONT font = CreateFontW(size, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                                  OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-                                 DEFAULT_PITCH | FF_SWISS, "Segoe UI");
+                                 DEFAULT_PITCH | FF_SWISS, L"Microsoft YaHei UI");
         HFONT old = static_cast<HFONT>(SelectObject(hdc, font));
-        TextOutA(hdc, x, y, text, static_cast<int>(std::strlen(text)));
+        TextOutW(hdc, x, y, wideText, static_cast<int>(wcslen(wideText)));
         SelectObject(hdc, old);
         DeleteObject(font);
     }
@@ -809,16 +836,54 @@ private:
         for (int i = 0; i < 18; ++i) {
             fillRect(hdc, i * 70, 80 + (i % 4) * 34, i * 70 + 42, 84 + (i % 4) * 34, RGB(37, 48, 73));
         }
-        drawText(hdc, 72, 86, "SHADOWLIGHT DUEL", RGB(245, 226, 155), 54);
-        drawText(hdc, 76, 154, "2D Online Asymmetric PVP - Light Blade vs Shadow Walker", RGB(184, 209, 228), 22);
-        drawText(hdc, 96, 250, "[H] Host room as Light Blade", RGB(254, 244, 188), 28);
-        drawText(hdc, 96, 305, "[J] Join room as Shadow Walker", RGB(186, 210, 255), 28);
-        drawText(hdc, 96, 360, "[O] Offline local duel demo", RGB(208, 240, 202), 28);
+        fillRect(hdc, 64, 190, 516, 642, RGB(18, 23, 36));
+        fillRect(hdc, 594, 218, 1008, 552, RGB(18, 23, 36));
+        drawText(hdc, 72, 86, u8"影域博弈", RGB(245, 226, 155), 54);
+        drawText(hdc, 76, 154, u8"双人联机 2D 非对称对抗：光刃使 对战 影行者", RGB(184, 209, 228), 22);
+        drawText(hdc, 96, 230, u8"[H] 建立房间：操控光刃使", RGB(254, 244, 188), 28);
+        drawText(hdc, 96, 285, u8"[J] 加入房间：操控影行者", RGB(186, 210, 255), 28);
+        drawText(hdc, 96, 340, u8"[O] 本机离线双人演示", RGB(208, 240, 202), 28);
+        fillRect(hdc, 88, 386, 318, 430, RGB(65, 82, 120));
+        drawText(hdc, 116, 397, u8"详细说明", RGB(255, 246, 196), 22);
         char ipLine[128];
-        std::snprintf(ipLine, sizeof(ipLine), "Join IP: %s   (type digits/dots, Backspace edits)", joinIp);
-        drawText(hdc, 96, 432, ipLine, RGB(222, 222, 222), 20);
-        drawText(hdc, 96, 520, "Light controls: W/A/S/D move, F attack, G burst light, Q place light, R reset", RGB(218, 218, 218), 18);
-        drawText(hdc, 96, 552, "Offline Shadow: Arrow keys move, Enter attack, Right Shift dash, Right Ctrl shadow field", RGB(218, 218, 218), 18);
+        std::snprintf(ipLine, sizeof(ipLine), u8"加入 IP：%s   （输入数字和点修改，退格删除）", joinIp);
+        drawText(hdc, 96, 464, ipLine, RGB(222, 222, 222), 18);
+        drawText(hdc, 96, 520, u8"光刃使：W/A/S/D 移动，F 攻击，G 强光爆发，Q 放置光源，R 重开", RGB(218, 218, 218), 16);
+        drawText(hdc, 96, 552, u8"离线影行者：方向键移动，Enter 攻击，K/Shift 冲刺，L/Ctrl 影域", RGB(218, 218, 218), 16);
+
+        drawText(hdc, 626, 244, u8"点击“详细说明”查看：", RGB(245, 226, 155), 24);
+        drawText(hdc, 642, 298, u8"联机步骤、角色技能、胜负规则", RGB(222, 226, 236), 18);
+        drawText(hdc, 642, 336, u8"画面元素、常见问题、课堂展示建议", RGB(222, 226, 236), 18);
+        drawText(hdc, 642, 398, u8"说明页可点击返回，也可按 Esc / B 返回。", RGB(208, 240, 202), 17);
+    }
+
+    void drawGuide(HDC hdc) {
+        fillRect(hdc, 34, 36, 1086, 682, RGB(18, 23, 36));
+        fillRect(hdc, 52, 622, 220, 664, RGB(65, 82, 120));
+        drawText(hdc, 54, 52, u8"详细游玩声明", RGB(245, 226, 155), 34);
+        drawText(hdc, 82, 632, u8"返回主菜单", RGB(255, 246, 196), 20);
+        drawText(hdc, 248, 635, u8"也可以按 Esc / B / Backspace 返回", RGB(184, 209, 228), 16);
+
+        const char* lines[] = {
+            u8"一、项目定位：本游戏是 C++ 2D 双人联机 PVP，光刃使与影行者进行非对称对抗。",
+            u8"二、进入方式：主机按 H 建房，客户端输入主机 IP 后按 J 加入；按 O 可本机离线双人演示。",
+            u8"三、本机双开：第一个窗口按 H，第二个窗口保持 127.0.0.1 并按 J，即可测试联机同步。",
+            u8"四、两台电脑：两台机器需在同一局域网；客户端输入主机局域网 IP；游戏使用 54000 端口。",
+            u8"五、光刃使：W/A/S/D 移动，F 光弹，G 强光爆发，Q 放置光源，R 重开；亮处作战更强。",
+            u8"六、影行者：联机时 W/A/S/D 移动，F 暗影弹，G 冲刺，Q 影域；暗处更灵活，适合突袭。",
+            u8"七、离线影行者：方向键移动，Enter 攻击，K 或 Shift 冲刺，L 或 Ctrl 释放影域。",
+            u8"八、胜负规则：任意一方先获得 3 分获胜；击败对手或控制中心据点都可以获得分数。",
+            u8"九、占点规则：地图中央大圆是据点；单方站入会推动进度，双方同时进入则进入争夺状态。",
+            u8"十、光影规则：黄色区域是光源；光刃使围绕光源压制，影行者用影域削弱光源再找机会切入。",
+            u8"十一、画面元素：黄色角色是光刃使，蓝色角色是影行者，小圆点是攻击弹体，底部显示技能冷却。",
+            u8"十二、联机同步：主机同步玩家位置、生命值、弹体、灯源、比分、占点进度和胜负结算。",
+            u8"十三、常见问题：连不上时检查 IP、局域网、防火墙、端口 54000，以及主机是否已经按 H。",
+            u8"十四、课堂展示：建议先按 O 离线展示技能，再双开演示联机，最后展示占点、击杀和胜负结算。",
+            u8"十五、版本边界：当前是基础可玩版，可继续扩展贴图、音效、地图障碍、房间界面和断线提示。"
+        };
+        for (int i = 0; i < static_cast<int>(sizeof(lines) / sizeof(lines[0])); ++i) {
+            drawText(hdc, 58, 112 + i * 34, lines[i], RGB(222, 226, 236), 17);
+        }
     }
 
     void drawWorld(HDC hdc, const WorldSnapshot& w) {
@@ -854,8 +919,8 @@ private:
             else if (b.kind == 3) ellipse(hdc, b.x, b.y, 66.0f * clampValue(b.life, 0.0f, 0.65f), RGB(28, 23, 52), RGB(116, 106, 210));
             else ellipse(hdc, b.x, b.y, 8.0f, b.kind == 0 ? RGB(252, 221, 99) : RGB(124, 146, 255), RGB(255, 255, 255));
         }
-        drawPlayer(hdc, w.players[0], "Light", RGB(246, 213, 96), RGB(255, 246, 196));
-        drawPlayer(hdc, w.players[1], "Shadow", RGB(108, 145, 255), RGB(201, 214, 255));
+        drawPlayer(hdc, w.players[0], u8"光刃使", RGB(246, 213, 96), RGB(255, 246, 196));
+        drawPlayer(hdc, w.players[1], u8"影行者", RGB(108, 145, 255), RGB(201, 214, 255));
         drawHud(hdc, w);
     }
 
@@ -871,25 +936,25 @@ private:
 
     void drawHud(HDC hdc, const WorldSnapshot& w) {
         char line[256];
-        std::snprintf(line, sizeof(line), "Light %d  :  %d Shadow    Capture %.0f    Time %.1fs",
+        std::snprintf(line, sizeof(line), u8"光刃使 %d  :  %d 影行者    占点 %.0f    时间 %.1f 秒",
                       w.players[0].score, w.players[1].score, w.capture, w.matchTime);
         drawText(hdc, 40, 18, line, RGB(236, 238, 242), 22);
-        const char* state = "Offline demo";
-        if (mode == ModeHost) state = w.connected ? "Host: client connected" : "Host: waiting on port 54000";
-        if (mode == ModeClient) state = "Client: connected to host";
+        const char* state = u8"本机离线演示";
+        if (mode == ModeHost) state = w.connected ? u8"主机：对手已连接" : u8"主机：等待对手连接 54000 端口";
+        if (mode == ModeClient) state = u8"客户端：已连接主机";
         drawText(hdc, 760, 20, state, RGB(182, 205, 224), 18);
-        std::snprintf(line, sizeof(line), "Light CD  attack %.1f  skill %.1f  beacon %.1f",
+        std::snprintf(line, sizeof(line), u8"光刃冷却  攻击 %.1f  强光 %.1f  光源 %.1f",
                       w.players[0].attackCd, w.players[0].skillCd, w.players[0].utilityCd);
         drawText(hdc, 44, 684, line, RGB(245, 226, 155), 17);
-        std::snprintf(line, sizeof(line), "Shadow CD attack %.1f  dash %.1f  field %.1f",
+        std::snprintf(line, sizeof(line), u8"影行冷却  攻击 %.1f  冲刺 %.1f  影域 %.1f",
                       w.players[1].attackCd, w.players[1].skillCd, w.players[1].utilityCd);
         drawText(hdc, 624, 684, line, RGB(190, 209, 255), 17);
         if (w.phase == PhaseWaiting) {
-            drawText(hdc, 390, 320, "Waiting for opponent...", RGB(255, 255, 255), 34);
+            drawText(hdc, 390, 320, u8"正在等待对手连接……", RGB(255, 255, 255), 34);
         }
         if (w.phase == PhaseGameOver) {
-            drawText(hdc, 402, 306, w.winner == 0 ? "LIGHT WINS" : "SHADOW WINS", RGB(255, 246, 190), 48);
-            drawText(hdc, 432, 366, "Press R to reset match", RGB(236, 238, 242), 22);
+            drawText(hdc, 402, 306, w.winner == 0 ? u8"光刃使胜利" : u8"影行者胜利", RGB(255, 246, 190), 48);
+            drawText(hdc, 432, 366, u8"按 R 重新开始对局", RGB(236, 238, 242), 22);
         }
     }
 };
@@ -903,6 +968,10 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
     case WM_KEYUP:
         if (gApp) gApp->onKeyUp(wParam);
+        return 0;
+    case WM_LBUTTONDOWN:
+        if (gApp) gApp->onMouseDown(LOWORD(lParam), HIWORD(lParam));
+        InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
     case WM_TIMER:
         if (gApp) gApp->tick();
@@ -936,16 +1005,16 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int show) {
     App app;
     gApp = &app;
 
-    WNDCLASSA wc{};
+    WNDCLASSW wc{};
     wc.lpfnWndProc = windowProc;
     wc.hInstance = instance;
-    wc.lpszClassName = "ShadowlightDuelWindow";
+    wc.lpszClassName = L"YingYuBoYiWindow";
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    RegisterClassA(&wc);
+    RegisterClassW(&wc);
 
     RECT rect{0, 0, kWidth, kHeight};
     AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
-    HWND hwnd = CreateWindowA(wc.lpszClassName, "Shadowlight Duel - 2D Online PVP",
+    HWND hwnd = CreateWindowW(wc.lpszClassName, L"影域博弈 - 双人联机 2D PVP",
                               WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX,
                               CW_USEDEFAULT, CW_USEDEFAULT,
                               rect.right - rect.left, rect.bottom - rect.top,
