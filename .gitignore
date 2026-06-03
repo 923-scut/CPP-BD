@@ -49,6 +49,8 @@
 
 # Build output directories
 build/
+!build/
+!build/YingYuBoYi.exe
 Debug/
 Release/
 x64/
