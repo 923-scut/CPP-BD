@@ -1,6 +1,6 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++14 -O2 -Wall -Wextra
-LDFLAGS ?= -mwindows -lws2_32 -lgdi32
+LDFLAGS ?= -mwindows -static -static-libgcc -static-libstdc++ -lws2_32 -lgdi32
 OUT_DIR := build
 TARGET := $(OUT_DIR)/YingYuBoYi.exe
 SRC := CPP-BD/src/main.cpp
