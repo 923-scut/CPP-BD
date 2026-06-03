@@ -39,3 +39,8 @@
 
 # debug information files
 *.dwo
+
+# Visual Studio user and cache files
+.vs/
+*.suo
+*.VC.db
